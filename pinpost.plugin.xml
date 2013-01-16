@@ -7,6 +7,7 @@
 	<license url="http://www.apache.org/licenses/LICENSE-2.0.html">Apache Software License 2.0</license>
 	<description><![CDATA[Regularly fetch items from Pinboard and create a post of them]]></description>
 	<copyright>2013</copyright>
+	<guid>151948c6-d575-47d7-ad21-5896fbedccec</guid>
 </pluggable>
 
  
