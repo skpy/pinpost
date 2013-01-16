@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<pluggable type="plugin">
+	<name>PinPost</name>
+	<version>1.0.0</version>
+	<url>http://habariproject.org/</url>
+	<author url="http://habariproject.org/">The Habari Community</author>
+	<license url="http://www.apache.org/licenses/LICENSE-2.0.html">Apache Software License 2.0</license>
+	<description><![CDATA[Regularly fetch items from Pinboard and create a post of them]]></description>
+	<copyright>2013</copyright>
+</pluggable>
+
+ 
