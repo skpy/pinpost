@@ -1,11 +1,38 @@
 <?php
 class pinpost extends Plugin
 {
+	public function action_plugin_activation( $file )
+	{
+		if ( realpath( $file ) == __FILE__ ) {
+			CronTab::add_cron( array(
+				'name' => 'pinpost',
+				'callback' => array( __CLASS__, 'fetch_all'),
+				'increment' => 3600,
+				'description' => 'poll Pinboard for each user every hour',
+			) );
+			ACL::create_token( 'pinpost', 'Manually execute a Pinboard fetch', 'pinpost' );
+		}
+	}
+
+	public function action_plugin_deactivation( $file )
+	{
+		if ( realpath( $file ) == __FILE__ ) {
+			CronTab::delete_cronjob( 'pinpost' );
+			ACL::destroy_token( 'pinpost' );
+		}
+	}
+
 	public function action_form_user( $form, $edit_user )
 	{
 		$pinpost = $form->insert( 'page_controls', 'wrapper', 'pinpost', _t( 'PinPost', 'pinpost' ) );
 		$pinpost->class = 'container settings';
 		$pinpost->append( 'static', 'pinpost', '<h2>' . htmlentities( _t( 'PinPost', 'pinpost' ), ENT_COMPAT, 'UTF-8' ) . '</h2>' );
+
+		$pinpost_active = $form->pinpost->append( 'select', 'pinpost_active', 'null:null', _t( 'Enable PinPost', 'pinpost' ) );
+		$pinpost_active->class[] = 'item clear';
+		$pinpost_active->options = array( 1 => 'Yes', 0 => 'No' );
+		$pinpost_active->template = 'optionscontrol_select';
+		$pinpost_active->value = $edit_user->info->pinpost_active;
 
 		$username = $form->pinpost->append( 'text', 'pinpost_username', 'null:null', _t('Your Pinboard username: ', 'pinpost' ), 'optionscontrol_text' );
 		$username->class[] = 'item clear';
@@ -41,6 +68,7 @@ class pinpost extends Plugin
 
 	public function filter_adminhandler_post_user_fields( $fields )
 	{
+		$fields['pinpost_active']   = 'pinpost_active';
 		$fields['pinpost_username'] = 'pinpost_username';
 		$fields['pinpost_password'] = 'pinpost_password';
 		$fields['pinpost_pintag']   = 'pinpost_pintag';
@@ -53,7 +81,9 @@ class pinpost extends Plugin
 	public function filter_plugin_config( $actions, $plugin_id )
 	{
 		if ( $plugin_id == $this->plugin_id() ) {
-			$actions[] = _t( 'Test' );
+			if ( User::identify()->can( 'pinpost' ) ) {
+				$actions[] = _t( 'Fetch', 'pinpost' );
+			}
 		}
 		return $actions;
 	}
@@ -62,15 +92,26 @@ class pinpost extends Plugin
 	{
 		if ( $plugin_id == $this->plugin_id() ) {
 			switch ( $action ) {
-				case _t( 'Test' ):
-					$this->get( User::identify() );
-						Utils::redirect( URL::get( 'admin', 'page=plugins' ) );
-						break;
+				case _t( 'Fetch' ):
+					self::fetch( User::identify() );
+					Utils::redirect( URL::get( 'admin', 'page=plugins' ) );
+					break;
 			}
 		}	
 	}
 
-	public function get( $user )
+	public static function fetch_all()
+	{
+		$users = Users::get( array( 'info' => array( 'pinpost_active' => 1 ) ) );
+		if ( ! $users ) {
+			return;
+		}
+		foreach ( $users as $user ) {
+			self::fetch( $user );
+		}
+	}
+
+	public static function fetch( $user )
 	{
 		include_once 'pinboard-api.php';
 		$p = new PinboardAPI ( $user->info->pinpost_username, $user->info->pinpost_password  );
