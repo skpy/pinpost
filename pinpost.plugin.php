@@ -61,7 +61,7 @@ class pinpost extends Plugin
 
 		$listtype = $form->pinpost->append( 'select', 'pinpost_listtype', 'null:null', _t( 'List type to use for Pinboard items: ', 'pinpost' ) );
 		$listtype->class[] = 'item clear';
-		$listtype->options = array( 'ol' => 'Ordered', 'ul' => 'Unordered', 'none' => 'None' );
+		$listtype->options = array( 'ol' => 'Ordered', 'ul' => 'Unordered','md' => 'Markdown', 'none' => 'None' );
 		$listtype->template = 'optionscontrol_select';
 		$listtype->value = $edit_user->info->pinpost_listtype;
 	}
@@ -124,7 +124,7 @@ class pinpost extends Plugin
 		$close = '';
 		$itemopen = '';
 		$itemclose = '<br />';
-		if ( 'none' != $user->info->pinpost_listtype ) {
+		if ( 'none' != $user->info->pinpost_listtype || 'Markdown' !=$user->info->pinpost_listtype) {
 			$open = '<' . $user->info->pinpost_listtype . '>';
 			$close = '</' . $user->info->pinpost_listtype . '>';
 			$itemopen = '<li>';
@@ -150,7 +150,11 @@ class pinpost extends Plugin
 		}
 		$content = '';
 		foreach ( $bookmarks as $bookmark ) {
+			 if ( 'Markdown' != $user->info->pinpost_listtype ) {
 			$content .= $itemopen . '<h3><a href="' . $bookmark->url . '">' . $bookmark->title . '</a></h3><p>' . $bookmark->description . '</p>' . $itemclose;
+		} else {
+			$content .=$itemopen . '### [' . $bookmark->title . '](' . $bookmark->url . ')' . $bookmark->description  .$itemclose;
+		}
 		}
 		$content .= $close . '</p>';
 		$post->content = str_replace( "$close</p>", $content, $post->content );
