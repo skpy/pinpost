@@ -137,7 +137,11 @@ class pinpost extends Plugin
 			) );
 		if ( ! $post ) {
 			// no draft post exists, let's prep a new one
+			 if ( 'md' == $user->info->pinpost_listtype ) {
+			 	$content = '';
+			 } else {
 			$content = '<p>' . $open . $close . '</p>';
+			}
 			$postdata = array(
 				'title'        => $user->info->pinpost_title,
 				'tags'         => $user->info->pinpost_posttag,
@@ -156,8 +160,12 @@ class pinpost extends Plugin
 			$content .= $itemopen . '<h3><a href="' . $bookmark->url . '">' . $bookmark->title . '</a></h3><p>' . $bookmark->description . '</p>' . $itemclose;
 		}
 		}
+		if ( 'md' == $user->info->pinpost_listtype ) {
+			$post->content = $content;
+		} else {
 		$content .= $close . '</p>';
 		$post->content = str_replace( "$close</p>", $content, $post->content );
+		}
 		$post->update();
 		$user->info->pinpost_lastcheck = time();
 		$user->update();
