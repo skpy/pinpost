@@ -155,7 +155,7 @@ class pinpost extends Plugin
 		$content = '';
 		foreach ( $bookmarks as $bookmark ) {
 			 if ( 'md' == $user->info->pinpost_listtype ) {
-			 	$content .=$itemopen . '### [' . $bookmark->title . '](' . $bookmark->url . ')' . $bookmark->description  .$itemclose;
+			 	$content .= '### [' . $bookmark->title . '](' . $bookmark->url . ") \n" . $bookmark->description  . "\n";
 		} else {
 			$content .= $itemopen . '<h3><a href="' . $bookmark->url . '">' . $bookmark->title . '</a></h3><p>' . $bookmark->description . '</p>' . $itemclose;
 		}
