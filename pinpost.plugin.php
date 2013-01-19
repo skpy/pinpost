@@ -124,7 +124,7 @@ class pinpost extends Plugin
 		$close = '';
 		$itemopen = '';
 		$itemclose = '<br />';
-		if ( 'none' != $user->info->pinpost_listtype || 'Markdown' !=$user->info->pinpost_listtype) {
+		if ( !in_array($user->info->pinpost_listtype, array('none','md'))) {
 			$open = '<' . $user->info->pinpost_listtype . '>';
 			$close = '</' . $user->info->pinpost_listtype . '>';
 			$itemopen = '<li>';
@@ -150,10 +150,10 @@ class pinpost extends Plugin
 		}
 		$content = '';
 		foreach ( $bookmarks as $bookmark ) {
-			 if ( 'Markdown' != $user->info->pinpost_listtype ) {
-			$content .= $itemopen . '<h3><a href="' . $bookmark->url . '">' . $bookmark->title . '</a></h3><p>' . $bookmark->description . '</p>' . $itemclose;
+			 if ( 'md' == $user->info->pinpost_listtype ) {
+			 	$content .=$itemopen . '### [' . $bookmark->title . '](' . $bookmark->url . ')' . $bookmark->description  .$itemclose;
 		} else {
-			$content .=$itemopen . '### [' . $bookmark->title . '](' . $bookmark->url . ')' . $bookmark->description  .$itemclose;
+			$content .= $itemopen . '<h3><a href="' . $bookmark->url . '">' . $bookmark->title . '</a></h3><p>' . $bookmark->description . '</p>' . $itemclose;
 		}
 		}
 		$content .= $close . '</p>';
