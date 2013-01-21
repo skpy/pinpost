@@ -61,7 +61,7 @@ class pinpost extends Plugin
 
 		$listtype = $form->pinpost->append( 'select', 'pinpost_listtype', 'null:null', _t( 'List type to use for Pinboard items: ', 'pinpost' ) );
 		$listtype->class[] = 'item clear';
-		$listtype->options = array( 'ol' => 'Ordered', 'ul' => 'Unordered', 'none' => 'None' );
+		$listtype->options = array( 'ol' => 'Ordered', 'ul' => 'Unordered','md' => 'Markdown', 'none' => 'None' );
 		$listtype->template = 'optionscontrol_select';
 		$listtype->value = $edit_user->info->pinpost_listtype;
 	}
@@ -124,7 +124,7 @@ class pinpost extends Plugin
 		$close = '';
 		$itemopen = '';
 		$itemclose = '<br />';
-		if ( 'none' != $user->info->pinpost_listtype ) {
+		if ( !in_array($user->info->pinpost_listtype, array('none','md'))) {
 			$open = '<' . $user->info->pinpost_listtype . '>';
 			$close = '</' . $user->info->pinpost_listtype . '>';
 			$itemopen = '<li>';
@@ -137,7 +137,11 @@ class pinpost extends Plugin
 			) );
 		if ( ! $post ) {
 			// no draft post exists, let's prep a new one
+			 if ( 'md' == $user->info->pinpost_listtype ) {
+			 	$content = '';
+			 } else {
 			$content = '<p>' . $open . $close . '</p>';
+			}
 			$postdata = array(
 				'title'        => $user->info->pinpost_title,
 				'tags'         => $user->info->pinpost_posttag,
@@ -150,10 +154,18 @@ class pinpost extends Plugin
 		}
 		$content = '';
 		foreach ( $bookmarks as $bookmark ) {
+			 if ( 'md' == $user->info->pinpost_listtype ) {
+			 	$content .= '### [' . $bookmark->title . '](' . $bookmark->url . ") \n" . $bookmark->description  . "\n";
+		} else {
 			$content .= $itemopen . '<h3><a href="' . $bookmark->url . '">' . $bookmark->title . '</a></h3><p>' . $bookmark->description . '</p>' . $itemclose;
 		}
+		}
+		if ( 'md' == $user->info->pinpost_listtype ) {
+			$post->content = $content;
+		} else {
 		$content .= $close . '</p>';
 		$post->content = str_replace( "$close</p>", $content, $post->content );
+		}
 		$post->update();
 		$user->info->pinpost_lastcheck = time();
 		$user->update();
