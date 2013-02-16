@@ -115,12 +115,16 @@ class pinpost extends Plugin
 	{
 		include_once 'pinboard-api.php';
 		$p = new PinboardAPI ( $user->info->pinpost_username, $user->info->pinpost_password  );
-		$last = $p->get_updated_time();
-		if ( $last > $user->info->pinpost_lastcheck ) {
+		$last_pin = $p->get_updated_time();
+		if ( $last_pin < $user->info->pinpost_lastcheck ) {
+			$user->info->pinpost_lastcheck = time();
+			$user->update();
 			return;
 		}
-		$bookmarks = $p->get_all( null, null, $user->info->pinpost_pintag, $user->info->pinpost_lastcheck, null );
+		$bookmarks = $p->get_all( null, null, $user->info->pinpost_pintag, $user->info->pinpost_lastcheck, $last );
 		if ( ! $bookmarks ) {
+			$user->info->pinpost_lastcheck = time();
+			$user->update();
 			return;
 		}
 
@@ -157,20 +161,32 @@ class pinpost extends Plugin
 			$post = Post::create( $postdata );
 		}
 		$content = '';
+		$changed = false;
 		foreach ( $bookmarks as $bookmark ) {
-			 if ( 'md' == $user->info->pinpost_listtype ) {
+			if ( $bookmark->timestamp < $user->info->pinpost_lastcheck ) {
+				continue;
+			}
+			$changed = true;
+			// make sure we don't publish empty titles
+			if ( '' == $bookmark->title ) {
+				$bookmark->title = $bookmark->url;
+			}
+			if ( 'md' == $user->info->pinpost_listtype ) {
 			 	$content .= '### [' . $bookmark->title . '](' . $bookmark->url . ") \n" . $bookmark->description  . "\n";
 			} else {
 				$content .= $itemopen . '<h3><a href="' . $bookmark->url . '">' . $bookmark->title . '</a></h3><p>' . $bookmark->description . '</p>' . $itemclose;
 			}
 		}
 		if ( 'md' == $user->info->pinpost_listtype ) {
-			$post->content = $content;
+			$original = $post->content;
+			$post->content = $original . $content;
 		} else {
 			$content .= $close . '</p>';
 			$post->content = str_replace( "$close</p>", $content, $post->content );
 		}
-		$post->update();
+		if ( $changed ) {
+			$post->update();
+		}
 		$user->info->pinpost_lastcheck = time();
 		$user->update();
 	}
