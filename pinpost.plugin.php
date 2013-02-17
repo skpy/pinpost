@@ -115,28 +115,35 @@ class pinpost extends Plugin
 	{
 		include_once 'pinboard-api.php';
 		$p = new PinboardAPI ( $user->info->pinpost_username, $user->info->pinpost_password  );
+		// PinBoard uses UTC so let's use that, too
+		date_default_timezone_set('UTC');
+
 		$last_pin = $p->get_updated_time();
 		if ( $last_pin < $user->info->pinpost_lastcheck ) {
 			$user->info->pinpost_lastcheck = time();
 			$user->update();
 			return;
 		}
-		$bookmarks = $p->get_all( null, null, $user->info->pinpost_pintag, $user->info->pinpost_lastcheck, $last );
+		$last_check = date( 'Y-m-d H:i:s', $user->info->pinpost_lastcheck );
+		$bookmarks = $p->get_all( null, null, $user->info->pinpost_pintag, $last_check );
 		if ( ! $bookmarks ) {
 			$user->info->pinpost_lastcheck = time();
 			$user->update();
 			return;
 		}
 
-		$open = '';
-		$close = '';
-		$itemopen = '';
-		$itemclose = '<br />';
-		if ( !in_array($user->info->pinpost_listtype, array('none','md'))) {
-			$open = '<' . $user->info->pinpost_listtype . '>';
-			$close = '</' . $user->info->pinpost_listtype . '>';
-			$itemopen = '<li>';
-			$itemclose = '</li>';
+		$open = '<p><' . $user->info->pinpost_listtype . '>';
+		$close = '</' . $user->info->pinpost_listtype . '></p>';
+		switch ( $user->info->pinpost_listtype ) {
+			case 'ul':
+			case 'ol':
+				$template = '<li><h3><a href="PINURL">PINTITLE</a></h3><p>PINTEXT</p></li>';
+				break;
+			case 'md':
+				$open = '';
+				$close = "\n";
+				$template = "### [PINTITLE](PINURL) \nPINTEXT\n";
+				break;
 		}
 		$post = Post::get( array(
 			'user_id'   => $user->id,
@@ -145,11 +152,7 @@ class pinpost extends Plugin
 			) );
 		if ( ! $post ) {
 			// no draft post exists, let's prep a new one
-			 if ( 'md' == $user->info->pinpost_listtype ) {
-			 	$content = '';
-			 } else {
-				$content = '<p>' . $open . $close . '</p>';
-			}
+			$content = $open . $close;
 			$postdata = array(
 				'title'        => $user->info->pinpost_title,
 				'tags'         => $user->info->pinpost_posttag,
@@ -164,6 +167,8 @@ class pinpost extends Plugin
 		$changed = false;
 		foreach ( $bookmarks as $bookmark ) {
 			if ( $bookmark->timestamp < $user->info->pinpost_lastcheck ) {
+				// make sure the Pinboard API didn't feed us
+				// any old pins
 				continue;
 			}
 			$changed = true;
@@ -171,22 +176,19 @@ class pinpost extends Plugin
 			if ( '' == $bookmark->title ) {
 				$bookmark->title = $bookmark->url;
 			}
-			if ( 'md' == $user->info->pinpost_listtype ) {
-			 	$content .= '### [' . $bookmark->title . '](' . $bookmark->url . ") \n" . $bookmark->description  . "\n";
-			} else {
-				$content .= $itemopen . '<h3><a href="' . $bookmark->url . '">' . $bookmark->title . '</a></h3><p>' . $bookmark->description . '</p>' . $itemclose;
-			}
+			$content .= $template;
+			$content = str_replace( 'PINURL', $bookmark->url, $content );
+			$content = str_replace( 'PINTITLE', $bookmark->title, $content );
+			$content = str_replace( 'PINTEXT', $bookmark->description, $content );
 		}
-		if ( 'md' == $user->info->pinpost_listtype ) {
-			$original = $post->content;
-			$post->content = $original . $content;
-		} else {
-			$content .= $close . '</p>';
-			$post->content = str_replace( "$close</p>", $content, $post->content );
+		if ( ! $changed ) {
+			// no new pins.  don't do anything
+			$user->info->pinpost_lastcheck = time();
+			continue;
 		}
-		if ( $changed ) {
-			$post->update();
-		}
+		$content .= $close;
+		$post->content = preg_replace( '/' . preg_quote( $close ) . '$/', $content, $post->content, 1 );
+		$post->update();
 		$user->info->pinpost_lastcheck = time();
 		$user->update();
 	}
