@@ -124,8 +124,7 @@ class pinpost extends Plugin
 			$user->update();
 			return;
 		}
-		$last_check = date( 'Y-m-d H:i:s', $user->info->pinpost_lastcheck );
-		$bookmarks = $p->get_all( null, null, $user->info->pinpost_pintag, $last_check );
+		$bookmarks = $p->get_all( null, null, $user->info->pinpost_pintag, $user->info->pinpost_lastcheck );
 		if ( ! $bookmarks ) {
 			$user->info->pinpost_lastcheck = time();
 			$user->update();
